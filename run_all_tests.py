@@ -29,10 +29,11 @@ def main():
     mbeds = mbed_lstools.create()
     muts = mbeds.list_mbeds(filter_function=None, unique_names=True, read_details_txt=False)
 
+    mo = datetime.now().month
+    day = datetime.now().day
     hr = datetime.now().hour
     min = datetime.now().minute
-    sec = datetime.now().second
-    timestamp =  str(hr) + str(min) + str(sec)
+    timestamp =  str(mo) + str(day) + str(hr) + str(min)
 
     print(module_name + "TIMESTAMP : " + timestamp)
 
