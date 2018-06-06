@@ -51,7 +51,7 @@ def main():
         target = mut['platform_name']
 
         for toolchain in toolchains:
-            test_command = "sudo mbed test --compile " + " -t " + toolchain + " -m " + target + " " + other_args
+            test_command = "mbed test --compile " + " -t " + toolchain + " -m " + target + " " + other_args
             print(module_name + "TEST_COMMAND : " + test_command)
 
             if args.dontrun == 0:
@@ -61,7 +61,7 @@ def main():
                     output = str(e.output)
                 print output
 
-            test_command = "sudo mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-html " + "./" + folder + "/" + target + "_" + toolchain + "_" + timestamp + ".html"
+            test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-html " + "./" + folder + "/" + target + "_" + toolchain + "_" + timestamp + ".html"
             print(module_name + "TEST_COMMAND : " + test_command)
 
             if args.dontrun == 0:

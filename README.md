@@ -22,5 +22,4 @@ Running tests
 ```
 
 Known Issues
-- the script currently inserts 'sudo' to run commands on linux to avoid permissions issues.  This is obviously not ideal and won't work on Windows.
 - running this tool is not ideal.  In the future I'll recommend a different procedure.   
