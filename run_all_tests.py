@@ -62,7 +62,7 @@ def main():
                     output = str(e.output)
                 print output
 
-            test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-html " + "./" + folder + "/" + target + "_" + toolchain + "_" + timestamp + ".html"
+            test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-json " + "./" + folder + "/" + target + "_" + toolchain + "_" + timestamp + ".json"
             print(module_name + "TEST_COMMAND : " + test_command)
 
             if args.dontrun == 0:
