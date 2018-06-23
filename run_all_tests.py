@@ -10,6 +10,11 @@ import json
 from os.path import join, abspath, dirname
 from json import load, dump
 
+#this script must run in a mbed-os top level directory
+ROOT = "."
+sys.path.insert(0, ROOT)
+from tools.targets import TARGETS
+
 parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected boards with all toolchains')
 parser.add_argument("-o", "--other_args", default="", action='store', help="Other arguments to pass as a string")  #default is string
 parser.add_argument("-d", "--dontrun", default=0, action='count', help="print commands, don't run them")  #just check if present
@@ -93,6 +98,10 @@ def generate_scorecard(folder, target, other_args) :
         
     scorecard_data["date"] = datetime.now().day
     scorecard_data["ver"] = mbed_ver
+
+    for target_entry in TARGETS:
+        if target.capitalize() == target_entry.name.capitalize():
+            scorecard_data["device_has"] = target_entry.device_has
 
 #get device has data for this target
 #Get test data            
