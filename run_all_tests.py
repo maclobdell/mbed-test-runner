@@ -5,6 +5,10 @@ import subprocess
 import datetime
 from datetime import datetime
 import mbed_lstools
+import sys
+import json
+from os.path import join, abspath, dirname
+from json import load, dump
 
 parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected boards with all toolchains')
 parser.add_argument("-o", "--other_args", default="", action='store', help="Other arguments to pass as a string")  #default is string
@@ -15,7 +19,6 @@ parser.add_argument("-f", "--folder", default="test_output", action='store', hel
 #   Used here so I could have the option to pipe output to log file (e.g. command > log.txt).
 
 def main():
-
     module_name = "[run_all_tests.py] : "
 
     toolchains = ['gcc_arm', 'arm', 'iar']
@@ -62,7 +65,8 @@ def main():
                     output = str(e.output)
                 print output
 
-            test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-json " + "./" + folder + "/" + target + "_" + toolchain + "_" + timestamp + ".json"
+            test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-json " + "./" + folder + "/" + target + "_" + toolchain + "_" + timestamp + "_results.json"
+    
             print(module_name + "TEST_COMMAND : " + test_command)
 
             if args.dontrun == 0:
@@ -71,6 +75,59 @@ def main():
                 except Exception, e:
                     output = str(e.output)
                 print output
+        
+        generate_scorecard(folder, target, other_args)    
+
+def generate_scorecard(folder, target, other_args) :
+#  1. check that all three log files are present, if so, generate the scorecard_data
+#       a. get all possible "devic_has" data for any targets, use that as the template for all targets,
+#          then get "device_has" data for the target, add to scorecard
+#        b. read each test log file and add data to the scorecard
+#             print any errors
+#  2.  validate scorecard and report any errors (create an error.txt file to log errors for each target)
+
+#    get mbed_ver
+    mbed_ver = "mbed-os-5.99"
+    score_card_file = target + mbed_ver + "_scorecard.json"
+    scorecard_data = {}
+        
+    scorecard_data["date"] = datetime.now().day
+    scorecard_data["ver"] = mbed_ver
+
+#get device has data for this target
+#Get test data            
+    for file in os.listdir(folder):
+        if file.endswith("_results.json"):
+
+            #TODO Need error condition checking such as missing input file, mismatch in target or toolchain, duplicate data, etc.    
+
+             test_data_json_file = os.path.join(folder, file)    
+             print test_data_json_file
+             #test_data_json_file = "C://Users//maclob01//Documents//Projects//TARGET_PARSING//scorecard_generator/HEXIWEAR_iar_6131936.json"
+             
+             with open (test_data_json_file, "r") as f:
+                test_data = json.loads(f.read()) 
+                f.close()
+            
+                for target_toolchain in test_data:                
+                    test_results = {}
+                    platform, toolchain = target_toolchain.split("-")
+                    #print platform,toolchain
+                    scorecard_data["name"] = platform
+                                    
+                    target_test_data = test_data[target_toolchain]
+                    for test_suite in target_test_data:
+                        test_suite_data = target_test_data[test_suite]  
+                        test_results[test_suite] =  test_suite_data.get("single_test_result", "none")
+                        
+        scorecard_data[toolchain] = test_results    
+            
+            
+    s = json.dumps(scorecard_data)    
+    with open (folder + "//" + target + "_" + mbed_ver + "_scorecard.json", "w") as f:
+        f.write(s)
+        f.close()
+
 
 if __name__ == '__main__':
     main()
