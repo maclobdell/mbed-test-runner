@@ -9,6 +9,7 @@ import sys
 import json
 from os.path import join, abspath, dirname
 from json import load, dump
+import re
 
 #this script must run in a mbed-os top level directory
 ROOT = "."
@@ -50,14 +51,51 @@ def main():
     for toolchain in toolchains:
         print(module_name + "TOOLCHAIN : "  + toolchain)
 
+# Output files go in folder structure /<test_output>/<mbed_version>/<platform>
+    mbed_os_path = os.getcwd()
+    print mbed_os_path
+
     #create directory for output folder here
     try:
         os.stat(folder)
     except:
         os.mkdir(folder)
 
+    #get the branch name
+    output = subprocess.check_output("git rev-parse --abbrev-ref HEAD" , shell=True, stderr=subprocess.STDOUT)    
+    
+    #todo - need to add check for mbed-os branch is appropriate to set as folder name.
+    print output
+    output_alnum = re.sub(r'\W+', '', output)
+    print output_alnum
+    mbed_ver = output_alnum
+    
+    #change to the output directory
+    os.chdir(folder)
+
+    #create directory for the mbed version results
+    try:
+        os.stat(mbed_ver)
+    except:
+        os.mkdir(mbed_ver)
+
+    os.chdir(mbed_ver)
+    
     for mut in muts:
         target = mut['platform_name']
+
+        #create directory for the platform
+        try:
+            os.stat(target)
+        except:
+            os.mkdir(target)
+
+        os.chdir(target)
+        output_folder_path = os.getcwd()
+        print output_folder_path 
+        
+        #go back up one
+        os.chdir("../")
 
         for toolchain in toolchains:
             test_command = "mbed test --compile " + " -t " + toolchain + " -m " + target + " " + other_args
@@ -70,7 +108,7 @@ def main():
                     output = str(e.output)
                 print output
 
-            test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-json " + "./" + folder + "/" + target + "_" + toolchain + "_" + timestamp + "_results.json"
+            test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-json " + output_folder_path + "/" + target + "_" + toolchain + "_" + timestamp + "_results.json"
     
             print(module_name + "TEST_COMMAND : " + test_command)
 
@@ -81,18 +119,16 @@ def main():
                     output = str(e.output)
                 print output
         
-        generate_scorecard(folder, target, other_args)    
+        generate_scorecard(output_folder_path, target, mbed_ver, other_args)    
 
-def generate_scorecard(folder, target, other_args) :
+def generate_scorecard(output_folder_path, target, mbed_ver, other_args) :
 #  1. check that all three log files are present, if so, generate the scorecard_data
-#       a. get all possible "devic_has" data for any targets, use that as the template for all targets,
+#       a. get all possible "device_has" data for any targets, use that as the template for all targets,
 #          then get "device_has" data for the target, add to scorecard
 #        b. read each test log file and add data to the scorecard
 #             print any errors
 #  2.  validate scorecard and report any errors (create an error.txt file to log errors for each target)
 
-#    get mbed_ver
-    mbed_ver = "mbed-os-5.99"
     score_card_file = target + mbed_ver + "_scorecard.json"
     scorecard_data = {}
         
@@ -105,12 +141,12 @@ def generate_scorecard(folder, target, other_args) :
 
 #get device has data for this target
 #Get test data            
-    for file in os.listdir(folder):
+    for file in os.listdir(output_folder_path):
         if file.endswith("_results.json"):
 
             #TODO Need error condition checking such as missing input file, mismatch in target or toolchain, duplicate data, etc.    
 
-             test_data_json_file = os.path.join(folder, file)    
+             test_data_json_file = os.path.join(output_folder_path, file)    
              print test_data_json_file
              #test_data_json_file = "C://Users//maclob01//Documents//Projects//TARGET_PARSING//scorecard_generator/HEXIWEAR_iar_6131936.json"
              
@@ -133,7 +169,7 @@ def generate_scorecard(folder, target, other_args) :
             
             
     s = json.dumps(scorecard_data)    
-    with open (folder + "//" + target + "_" + mbed_ver + "_scorecard.json", "w") as f:
+    with open (output_folder_path + "//" + target + "_" + mbed_ver + "_scorecard.json", "w") as f:
         f.write(s)
         f.close()
 
