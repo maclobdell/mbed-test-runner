@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected
 parser.add_argument("-o", "--other_args", default="", action='store', help="Other arguments to pass as a string")  #default is string
 parser.add_argument("-d", "--dontrun", default=0, action='count', help="print commands, don't run them")  #just check if present
 parser.add_argument("-f", "--folder", default="test_output", action='store', help="Folder to dump test results to")  #default is string
+parser.add_argument("-s", "--scorecard", default=0, action='count', help="generate scorecard file")  #just check if present
 
 #Warning: Using shell=True can be a security hazard.  Ignoring because I control the command parameters.
 #   Used here so I could have the option to pipe output to log file (e.g. command > log.txt).
@@ -118,8 +119,8 @@ def main():
                 except Exception, e:
                     output = str(e.output)
                 print output
-        
-        generate_scorecard(output_folder_path, target, mbed_ver, other_args)    
+        if args.scorecard == 1:
+            generate_scorecard(output_folder_path, target, mbed_ver, other_args)    
 
 def generate_scorecard(output_folder_path, target, mbed_ver, other_args) :
 #  1. check that all three log files are present, if so, generate the scorecard_data
