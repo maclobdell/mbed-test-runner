@@ -10,6 +10,7 @@ import json
 from os.path import join, abspath, dirname
 from json import load, dump
 import re
+import logging
 
 #this script must run in a mbed-os top level directory
 ROOT = "."
@@ -62,13 +63,17 @@ def main():
     except:
         os.mkdir(folder)
 
+    log_file_path = mbed_os_path + "/" + folder + "/test_runner_log_" + timestamp + ".txt"
+    logging.basicConfig(filename=log_file_path, level=logging.DEBUG)
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.DEBUG)     
+    
     #get the branch name
     output = subprocess.check_output("git rev-parse --abbrev-ref HEAD" , shell=True, stderr=subprocess.STDOUT)    
     
     #todo - need to add check for mbed-os branch is appropriate to set as folder name.
-    print output
     output_alnum = re.sub(r'\W+', '', output)
-    print output_alnum
+    log.debug(output_alnum)
     mbed_ver = output_alnum
     
     #change to the output directory
@@ -79,7 +84,7 @@ def main():
         os.stat(mbed_ver)
     except:
         os.mkdir(mbed_ver)
-
+        
     os.chdir(mbed_ver)
     
     for mut in muts:
@@ -93,7 +98,7 @@ def main():
 
         os.chdir(target)
         output_folder_path = os.getcwd()
-        print output_folder_path 
+        log.debug(output_folder_path)
         
         #go back up one
         os.chdir("../")
@@ -101,28 +106,30 @@ def main():
         for toolchain in toolchains:
             test_command = "mbed test --compile " + " -t " + toolchain + " -m " + target + " " + other_args
             print(module_name + "TEST_COMMAND : " + test_command)
-
+            log.debug(test_command)    
             if args.dontrun == 0:
                 try:
                     output = subprocess.check_call(test_command , shell=True, stderr=subprocess.STDOUT)
                 except Exception, e:
                     output = str(e.output)
-                print output
+                    log.error("COMPILE COMMAND FAILED",toolchain, target)
+                log.debug(output)
 
             test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-json " + output_folder_path + "/" + target + "_" + toolchain + "_" + timestamp + "_results.json"
     
             print(module_name + "TEST_COMMAND : " + test_command)
-
+            log.debug(test_command)
             if args.dontrun == 0:
                 try:
                     output = subprocess.check_call(test_command , shell=True, stderr=subprocess.STDOUT)
                 except Exception, e:
                     output = str(e.output)
-                print output
+                    log.error("TEST COMMAND FAILED",toolchain, target)
+                log.debug(output)
         if args.scorecard == 1:
-            generate_scorecard(output_folder_path, target, mbed_ver, other_args)    
+            generate_scorecard(output_folder_path, target, mbed_ver, other_args, log)    
 
-def generate_scorecard(output_folder_path, target, mbed_ver, other_args) :
+def generate_scorecard(output_folder_path, target, mbed_ver, other_args, log) :
 #  1. check that all three log files are present, if so, generate the scorecard_data
 #       a. get all possible "device_has" data for any targets, use that as the template for all targets,
 #          then get "device_has" data for the target, add to scorecard
@@ -148,7 +155,7 @@ def generate_scorecard(output_folder_path, target, mbed_ver, other_args) :
             #TODO Need error condition checking such as missing input file, mismatch in target or toolchain, duplicate data, etc.    
 
              test_data_json_file = os.path.join(output_folder_path, file)    
-             print test_data_json_file
+             log.debug(test_data_json_file)
              #test_data_json_file = "C://Users//maclob01//Documents//Projects//TARGET_PARSING//scorecard_generator/HEXIWEAR_iar_6131936.json"
              
              with open (test_data_json_file, "r") as f:
@@ -158,7 +165,7 @@ def generate_scorecard(output_folder_path, target, mbed_ver, other_args) :
                 for target_toolchain in test_data:                
                     test_results = {}
                     platform, toolchain = target_toolchain.split("-")
-                    #print platform,toolchain
+                    #log.debug(platform,toolchain)
                     scorecard_data["name"] = platform
                                     
                     target_test_data = test_data[target_toolchain]
