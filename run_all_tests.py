@@ -21,10 +21,13 @@ parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected
 parser.add_argument("-o", "--other_args", default="", action='store', help="Other arguments to pass as a string")  #default is string
 parser.add_argument("-d", "--dontrun", default=0, action='count', help="print commands, don't run them")  #just check if present
 parser.add_argument("-f", "--folder", default="test_output", action='store', help="Folder to dump test results to")  #default is string
-parser.add_argument("-s", "--scorecard", default=0, action='count', help="generate scorecard file")  #just check if present
+parser.add_argument("-s", "--scorecard", default=0, action='count', help="save target data (features enabled by device_has)")  #just check if present
 
 #Warning: Using shell=True can be a security hazard.  Ignoring because I control the command parameters.
 #   Used here so I could have the option to pipe output to log file (e.g. command > log.txt).
+
+#TODO - Every time you run this, create a new folder to store results (add the timestamp to the test_output folder)?
+
 
 def main():
     module_name = "[run_all_tests.py] : "
@@ -71,7 +74,7 @@ def main():
     #get the branch name
     output = subprocess.check_output("git rev-parse --abbrev-ref HEAD" , shell=True, stderr=subprocess.STDOUT)    
     
-    #todo - need to add check for mbed-os branch is appropriate to set as folder name.
+    #TODO - need to add check for mbed-os branch is appropriate to set as folder name.
     output_alnum = re.sub(r'\W+', '', output)
     log.debug(output_alnum)
     mbed_ver = output_alnum
@@ -127,57 +130,23 @@ def main():
                     log.error("TEST COMMAND FAILED",toolchain, target)
                 log.debug(output)
         if args.scorecard == 1:
-            generate_scorecard(output_folder_path, target, mbed_ver, other_args, log)    
+            save_target_data(output_folder_path, target, mbed_ver, other_args, log)    
 
-def generate_scorecard(output_folder_path, target, mbed_ver, other_args, log) :
-#  1. check that all three log files are present, if so, generate the scorecard_data
-#       a. get all possible "device_has" data for any targets, use that as the template for all targets,
-#          then get "device_has" data for the target, add to scorecard
-#        b. read each test log file and add data to the scorecard
-#             print any errors
-#  2.  validate scorecard and report any errors (create an error.txt file to log errors for each target)
+def save_target_data(output_folder_path, target, mbed_ver, other_args, log) :
 
-    score_card_file = target + mbed_ver + "_scorecard.json"
-    scorecard_data = {}
-        
-    scorecard_data["date"] = datetime.now().day
-    scorecard_data["ver"] = mbed_ver
+#TODO - somehow get number of compile warnings and other useful information
 
+    targetdata_data = {}        
+    targetdata_data["date"] = datetime.now().day
+    targetdata_data["ver"] = mbed_ver
+    
+#get device has data for this target
     for target_entry in TARGETS:
         if target.capitalize() == target_entry.name.capitalize():
-            scorecard_data["device_has"] = target_entry.device_has
-
-#get device has data for this target
-#Get test data            
-    for file in os.listdir(output_folder_path):
-        if file.endswith("_results.json"):
-
-            #TODO Need error condition checking such as missing input file, mismatch in target or toolchain, duplicate data, etc.    
-
-             test_data_json_file = os.path.join(output_folder_path, file)    
-             log.debug(test_data_json_file)
-             #test_data_json_file = "C://Users//maclob01//Documents//Projects//TARGET_PARSING//scorecard_generator/HEXIWEAR_iar_6131936.json"
-             
-             with open (test_data_json_file, "r") as f:
-                test_data = json.loads(f.read()) 
-                f.close()
-            
-                for target_toolchain in test_data:                
-                    test_results = {}
-                    platform, toolchain = target_toolchain.split("-")
-                    #log.debug(platform,toolchain)
-                    scorecard_data["name"] = platform
-                                    
-                    target_test_data = test_data[target_toolchain]
-                    for test_suite in target_test_data:
-                        test_suite_data = target_test_data[test_suite]  
-                        test_results[test_suite] =  test_suite_data.get("single_test_result", "none")
-                        
-        scorecard_data[toolchain] = test_results    
-            
-            
-    s = json.dumps(scorecard_data)    
-    with open (output_folder_path + "//" + target + "_" + mbed_ver + "_scorecard.json", "w") as f:
+            targetdata_data["device_has"] = target_entry.device_has
+        
+    s = json.dumps(targetdata_data)    
+    with open (output_folder_path + "//" + target + "_" + mbed_ver + "_target_data.json", "w") as f:
         f.write(s)
         f.close()
 
