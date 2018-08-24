@@ -12,16 +12,10 @@ from json import load, dump
 import re
 import logging
 
-#this script must run in a mbed-os top level directory
-ROOT = "."
-sys.path.insert(0, ROOT)
-from tools.targets import TARGETS
-
 parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected boards with all toolchains')
 parser.add_argument("-o", "--other_args", default="", action='store', help="Other arguments to pass as a string")  #default is string
 parser.add_argument("-d", "--dontrun", default=0, action='count', help="print commands, don't run them")  #just check if present
 parser.add_argument("-f", "--folder", default="test_output", action='store', help="Folder to dump test results to")  #default is string
-parser.add_argument("-s", "--scorecard", default=0, action='count', help="save target data (features enabled by device_has)")  #just check if present
 
 #Warning: Using shell=True can be a security hazard.  Ignoring because I control the command parameters.
 #   Used here so I could have the option to pipe output to log file (e.g. command > log.txt).
@@ -129,27 +123,6 @@ def main():
                     output = str(e.output)
                     log.error("TEST COMMAND FAILED",toolchain, target)
                 log.debug(output)
-        if args.scorecard == 1:
-            save_target_data(output_folder_path, target, mbed_ver, other_args, log)    
-
-def save_target_data(output_folder_path, target, mbed_ver, other_args, log) :
-
-#TODO - somehow get number of compile warnings and other useful information
-
-    targetdata_data = {}        
-    targetdata_data["date"] = datetime.now().day
-    targetdata_data["ver"] = mbed_ver
-    
-#get device has data for this target
-    for target_entry in TARGETS:
-        if target.capitalize() == target_entry.name.capitalize():
-            targetdata_data["device_has"] = target_entry.device_has
-        
-    s = json.dumps(targetdata_data)    
-    with open (output_folder_path + "//" + target + "_" + mbed_ver + "_target_data.json", "w") as f:
-        f.write(s)
-        f.close()
-
 
 if __name__ == '__main__':
     main()
