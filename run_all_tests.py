@@ -16,11 +16,10 @@ parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected
 parser.add_argument("-o", "--other_args", default="", action='store', help="Other arguments to pass as a string")  #default is string
 parser.add_argument("-d", "--dontrun", default=0, action='count', help="print commands, don't run them")  #just check if present
 parser.add_argument("-f", "--folder", default="test_output", action='store', help="Folder to dump test results to")  #default is string
+parser.add_argument("-r", "--report", default="json", action='store', help="Output format : json, html, text")  #default is string
 
 #Warning: Using shell=True can be a security hazard.  Ignoring because I control the command parameters.
 #   Used here so I could have the option to pipe output to log file (e.g. command > log.txt).
-
-#TODO - Every time you run this, create a new folder to store results (add the timestamp to the test_output folder)?
 
 
 def main():
@@ -31,8 +30,7 @@ def main():
     folder = args.folder  #folder to put the results
     report_type = args.report
 
-    #TODO - this isn't necessarily the mbed os location, just call it current directory
-    mbed_os_path = os.getcwd()
+    current_path = os.getcwd()
 
     toolchains = ['gcc_arm', 'arm', 'iar']
 
@@ -52,7 +50,7 @@ def main():
     except:
         os.mkdir(folder)
 
-    log_file_path = mbed_os_path + "/" + folder + "/test_runner_log_" + timestamp + ".txt"
+    log_file_path = current_path + "/" + folder + "/test_runner_log_" + timestamp + ".txt"
     logging.basicConfig(filename=log_file_path, level=logging.DEBUG)
     log = logging.getLogger("Test Runner")
     log.setLevel(logging.DEBUG)     
@@ -67,13 +65,12 @@ def main():
     for toolchain in toolchains:
         logger("TOOLCHAIN : "  + toolchain,log)
 
-    logger("Mbed OS Path: " + mbed_os_path,log)    
-    logger("Results Path: " + folder,log)
+    logger("Path: " + current_path,log)    
+    logger("Results Folder: " + folder,log)
     
     #get the branch name
     output = subprocess.check_output("git rev-parse --abbrev-ref HEAD" , shell=True, stderr=subprocess.STDOUT)    
     
-    #TODO - need to add check for mbed-os branch is appropriate to set as folder name.
     mbed_ver = re.sub(r'\W+', '', output)  #remove weird characters
     logger("Mbed OS Ver: " + mbed_ver,log)
 
@@ -139,9 +136,10 @@ def main():
 def logger(details, log):
     print(details)
     log.info(details)
+    
 def log_test_summary(output_foler_path, output_file_name, log):
     logger("TODO - Log Results",log)
-    #TODO Check how many tests ran and what their result was.  There might be a top level summary available in the json file.
+    #TODO Check how many tests ran and what their result was.
     #TODO This will depend on the output format.  
 
 
