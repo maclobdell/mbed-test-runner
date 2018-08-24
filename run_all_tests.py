@@ -45,18 +45,8 @@ def main():
     min = datetime.now().minute
     timestamp =  str(mo) + str(day) + str(hr) + str(min)
 
-    print(module_name + "TIMESTAMP : " + timestamp)
-
-    for mut in muts:
-        print(module_name + "FOUND : " + mut['platform_name'])
-    for toolchain in toolchains:
-        print(module_name + "TOOLCHAIN : "  + toolchain)
-
-# Output files go in folder structure /<test_output>/<mbed_version>/<platform>
-    mbed_os_path = os.getcwd()
-    print mbed_os_path
-
-    #create directory for output folder here
+    #Create directory for output folder here
+    # Output files go in folder structure /<test_output>/<mbed_version>/<platform>
     try:
         os.stat(folder)
     except:
