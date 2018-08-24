@@ -24,13 +24,17 @@ parser.add_argument("-f", "--folder", default="test_output", action='store', hel
 
 
 def main():
-    toolchains = ['gcc_arm', 'arm', 'iar']
-    #toolchains = ['gcc_arm']
 
     args = parser.parse_args()
 
     other_args = args.other_args
-    folder = args.folder
+    folder = args.folder  #folder to put the results
+    report_type = args.report
+
+    #TODO - this isn't necessarily the mbed os location, just call it current directory
+    mbed_os_path = os.getcwd()
+
+    toolchains = ['gcc_arm', 'arm', 'iar']
 
     mbeds = mbed_lstools.create()
     muts = mbeds.list_mbeds(filter_function=None, unique_names=True, read_details_txt=False)
@@ -139,10 +143,16 @@ def main():
                     log.error("Result: TEST COMMAND FAILED " + toolchain + " " + target)
                 log.debug("Command Output " + str(call_result))
 
+                log_test_summary(output_folder_path, output_file_name, log)
+                            
                  
 def logger(details, log):
     print(details)
     log.info(details)
+def log_test_summary(output_foler_path, output_file_name, log):
+    logger("TODO - Log Results",log)
+    #TODO Check how many tests ran and what their result was.  There might be a top level summary available in the json file.
+    #TODO This will depend on the output format.  
 
 
 if __name__ == '__main__':
