@@ -24,8 +24,6 @@ parser.add_argument("-f", "--folder", default="test_output", action='store', hel
 
 
 def main():
-    module_name = "[run_all_tests.py] : "
-
     toolchains = ['gcc_arm', 'arm', 'iar']
     #toolchains = ['gcc_arm']
 
@@ -62,16 +60,31 @@ def main():
 
     log_file_path = mbed_os_path + "/" + folder + "/test_runner_log_" + timestamp + ".txt"
     logging.basicConfig(filename=log_file_path, level=logging.DEBUG)
-    log = logging.getLogger(__name__)
+    log = logging.getLogger("Test Runner")
     log.setLevel(logging.DEBUG)     
+    
+    logger("-----------------------------------",log)
+    logger("Simple Mbed Test Runner Log",log)
+    logger("-----------------------------------",log)
+    logger("TIMESTAMP : " + timestamp,log)
+    
+    for mut in muts:
+        logger("PLATFORM : " + mut['platform_name'],log)
+    for toolchain in toolchains:
+        logger("TOOLCHAIN : "  + toolchain,log)
+
+    logger("Mbed OS Path: " + mbed_os_path,log)    
+    logger("Results Path: " + folder,log)
     
     #get the branch name
     output = subprocess.check_output("git rev-parse --abbrev-ref HEAD" , shell=True, stderr=subprocess.STDOUT)    
     
     #TODO - need to add check for mbed-os branch is appropriate to set as folder name.
-    output_alnum = re.sub(r'\W+', '', output)
-    log.debug(output_alnum)
-    mbed_ver = output_alnum
+    mbed_ver = re.sub(r'\W+', '', output)  #remove weird characters
+    logger("Mbed OS Ver: " + mbed_ver,log)
+
+    logger("Test Parameters: " + other_args,log)
+    logger("-----------------------------------",log)
     
     #change to the output directory
     os.chdir(folder)
@@ -84,6 +97,9 @@ def main():
         
     os.chdir(mbed_ver)
     
+    logger("Testing Started",log)
+    logger("Executing Commands...",log)
+        
     for mut in muts:
         target = mut['platform_name']
 
@@ -95,34 +111,39 @@ def main():
 
         os.chdir(target)
         output_folder_path = os.getcwd()
-        log.debug(output_folder_path)
+        log.debug("Results Going To: " + output_folder_path)
         
         #go back up one
         os.chdir("../")
 
+        output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.json"
+        
         for toolchain in toolchains:
             test_command = "mbed test --compile " + " -t " + toolchain + " -m " + target + " " + other_args
-            print(module_name + "TEST_COMMAND : " + test_command)
-            log.debug(test_command)    
-            if args.dontrun == 0:
-                try:
-                    output = subprocess.check_call(test_command , shell=True, stderr=subprocess.STDOUT)
-                except Exception, e:
-                    output = str(e.output)
-                    log.error("COMPILE COMMAND FAILED",toolchain, target)
-                log.debug(output)
+            logger(test_command,log)
 
-            test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-json " + output_folder_path + "/" + target + "_" + toolchain + "_" + timestamp + "_results.json"
-    
-            print(module_name + "TEST_COMMAND : " + test_command)
-            log.debug(test_command)
             if args.dontrun == 0:
                 try:
-                    output = subprocess.check_call(test_command , shell=True, stderr=subprocess.STDOUT)
+                    call_result = subprocess.check_call(test_command , shell=True, stderr=subprocess.STDOUT)
                 except Exception, e:
-                    output = str(e.output)
-                    log.error("TEST COMMAND FAILED",toolchain, target)
-                log.debug(output)
+                    call_result = str(e.output)
+                    log.error("Result: COMPILE COMMAND FAILED " + toolchain + " " + target)
+                log.debug("Command Output " + str(call_result))                
+            test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " --report-json " + output_folder_path + "/" + output_file_name    
+            logger(test_command,log)
+            if args.dontrun == 0:
+                try:
+                    call_result = subprocess.check_call(test_command , shell=True, stderr=subprocess.STDOUT)
+                except Exception, e:
+                    call_result = str(e.output)
+                    log.error("Result: TEST COMMAND FAILED " + toolchain + " " + target)
+                log.debug("Command Output " + str(call_result))
+
+                 
+def logger(details, log):
+    print(details)
+    log.info(details)
+
 
 if __name__ == '__main__':
     main()
