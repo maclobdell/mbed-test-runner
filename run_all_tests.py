@@ -118,13 +118,13 @@ def main():
         if report_type == "text":
             output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.txt"
             report_arg = "--report-text"    
-        else report_type == "html" :
+        elif report_type == "html" :
             output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.html"
             report_arg = "--report-html"
-        else report_type == "xml" :
+        elif report_type == "xml" :
             output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.xml"
             report_arg = "--report-junit"    
-        else :
+        else:
             #anytthing else, use json output
             output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.json"
             report_arg = "--report-json"
@@ -160,10 +160,7 @@ def logger(details, log):
     print(details)
     log.info(details)
     
-def log_test_summary(output_foler_path, output_file_name, log):
-    if report_type == "json":
-        logger("Check Results",log)
-        
+def log_test_summary(output_foler_path, output_file_name, log):    
         #open the log file 
         test_data_json_file = os.path.join(output_foler_path, output_file_name)    
         with open (test_data_json_file, "r") as f:
@@ -173,6 +170,8 @@ def log_test_summary(output_foler_path, output_file_name, log):
         #create table
         x = PrettyTable()        
         x.field_names = ["target", "platform_name", "test suite", "result"," elapsed_time (sec)"]
+
+        #TODO check if file valid, and results are available first
 
         #read test log for test suite results, put rows in the table
         for target_toolchain in test_data:                
