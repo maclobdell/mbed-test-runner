@@ -113,25 +113,25 @@ def main():
         
         #Go back up one
         os.chdir("../")
-
-        #Set an appropriate output file name
-        if report_type == "text":
-            output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.txt"
-            report_arg = "--report-text"    
-        elif report_type == "html" :
-            output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.html"
-            report_arg = "--report-html"
-        elif report_type == "xml" :
-            output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.xml"
-            report_arg = "--report-junit"    
-        else:
-            #anytthing else, use json output
-            output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.json"
-            report_arg = "--report-json"
         
         for toolchain in toolchains:
             test_command = "mbed test --compile " + " -t " + toolchain + " -m " + target + " " + other_args
             logger(test_command,log)
+
+            #Set an appropriate output file name
+            if report_type == "text":
+                output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.txt"
+                report_arg = "--report-text"    
+            elif report_type == "html" :
+                output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.html"
+                report_arg = "--report-html"
+            elif report_type == "xml" :
+                output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.xml"
+                report_arg = "--report-junit"    
+            else:
+                #anytthing else, use json output
+                output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.json"
+                report_arg = "--report-json"
 
             if args.dontrun == 0:
                 try:
