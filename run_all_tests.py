@@ -92,6 +92,7 @@ def main():
 
     #change to the directory that is named the same as the mbed os version  / branch or tag name
     os.chdir(mbed_ver)
+    mbed_ver_path = os.getcwd()
     
     logger("Testing Started",log)
     logger("Executing Commands...",log)
@@ -111,8 +112,8 @@ def main():
         output_folder_path = os.getcwd()
         log.debug("Results Going To: " + output_folder_path)
         
-        #Go back up one
-        os.chdir("../")
+        #Go back up to the top
+        os.chdir(current_path)
         
         for toolchain in toolchains:
             test_command = "mbed test --compile " + " -t " + toolchain + " -m " + target + " " + other_args
@@ -154,7 +155,8 @@ def main():
 
                 if report_type == "json":
                     log_test_summary(output_folder_path, output_file_name, log)
-                            
+        #get back into position for the next target    
+        os.chdir(mbed_ver_path)                
                  
 def logger(details, log):
     print(details)
