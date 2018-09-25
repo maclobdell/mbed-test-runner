@@ -14,37 +14,36 @@ import logging
 from prettytable import PrettyTable
 
 parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected boards with all toolchains')
-parser.add_argument("-o", "--other_args", default="", action='store', help="Other arguments to pass as a string")  #default is string
-parser.add_argument("-d", "--dontrun", default=0, action='count', help="print commands, don't run them")  #just check if present
+parser.add_argument("-t", "--toolchain", default="", action='store', help="Specified toolchain(s). You can provide comma-separated list.")  #default is string
+parser.add_argument("-j", "--jobs", default=1, action='store', help="Number of jobs. Default 1.")  #default is string
+parser.add_argument("-d", "--dryrun", default=False, action='store_true', help="print commands, don't run them")  #just check if present
 parser.add_argument("-f", "--folder", default="test_output", action='store', help="Folder to dump test results to")  #default is string
 parser.add_argument("-r", "--report", default="json", action='store', help="Output format : json, html, text, xml")  #default is string
+parser.add_argument("-o", "--other_args", default="", action='store', help="Other arguments to pass as a string")  #default is string
 
 #Warning: Using shell=True can be a security hazard.  Ignoring because I control the command parameters.
 #   Used here so I could have the option to pipe output to log file (e.g. command > log.txt).
 
 
 def main():
-
     args = parser.parse_args()
-
     other_args = args.other_args
     folder = args.folder  #folder to put the results
     report_type = args.report
-
     current_path = os.getcwd()
 
-    toolchains = ['gcc_arm', 'arm', 'iar']
+    if args.toolchain:
+        toolchains = args.toolchain.split(",")
+    else:
+        toolchains = ['GCC_ARM', 'ARM', 'IAR']
 
     #get list of connected boards
     mbeds = mbed_lstools.create()
     muts = mbeds.list_mbeds(filter_function=None, unique_names=True, read_details_txt=False)
 
     #get timestamp
-    mo = datetime.now().month
-    day = datetime.now().day
-    hr = datetime.now().hour
-    min = datetime.now().minute
-    timestamp =  str(mo) + str(day) + str(hr) + str(min)
+    dt = datetime.now()
+    timestamp =  "%s-%s-%s-%s-%s" % (dt.year, dt.month, dt.day, dt.hour, dt.minute)
 
     #Create directory for test results here
     # Output files go in folder structure /<test_output>/<mbed_version>/<platform>
@@ -58,29 +57,24 @@ def main():
     logging.basicConfig(filename=log_file_path, level=logging.DEBUG)
     log = logging.getLogger("Test Runner")
     log.setLevel(logging.DEBUG)     
-    
+
     logger("-----------------------------------",log)
     logger("Simple Mbed Test Runner Log",log)
     logger("-----------------------------------",log)
     logger("TIMESTAMP : " + timestamp,log)
-    
     for mut in muts:
         logger("PLATFORM : " + mut['platform_name'],log)
     for toolchain in toolchains:
         logger("TOOLCHAIN : "  + toolchain,log)
-
     logger("Path: " + current_path,log)    
     logger("Results Folder: " + folder,log)
-    
-    #get the branch name
-    output = subprocess.check_output("git rev-parse --abbrev-ref HEAD" , shell=True, stderr=subprocess.STDOUT)    
-    
+    output = subprocess.check_output("git rev-parse --abbrev-ref HEAD" , shell=True, stderr=subprocess.STDOUT) #get the branch name
     mbed_ver = re.sub(r'\W+', '', output)  #remove weird characters
     logger("Mbed OS Ver: " + mbed_ver,log)
 
     logger("Test Parameters: " + other_args,log)
     logger("-----------------------------------",log)
-    
+
     #change to the test results output directory
     os.chdir(folder)
 
@@ -134,7 +128,7 @@ def main():
                 output_file_name = target + "_" + toolchain + "_" + timestamp + "_results.json"
                 report_arg = "--report-json"
 
-            if args.dontrun == 0:
+            if not args.dryrun:
                 try:
                     call_result = subprocess.check_call(test_command , shell=True, stderr=subprocess.STDOUT)
                 except Exception, e:
@@ -145,7 +139,7 @@ def main():
             test_command = "mbed test --run " + " -t " + toolchain + " -m " + target + " " + other_args + " " + report_arg + " " + output_folder_path + "/" + output_file_name    
             logger(test_command,log)
             
-            if args.dontrun == 0:
+            if not args.dryrun:
                 try:
                     call_result = subprocess.check_call(test_command , shell=True, stderr=subprocess.STDOUT)
                 except Exception, e:
@@ -161,7 +155,7 @@ def main():
 def logger(details, log):
     print(details)
     log.info(details)
-    
+
 def log_test_summary(output_foler_path, output_file_name, log):    
         #open the log file 
         test_data_json_file = os.path.join(output_foler_path, output_file_name)    
