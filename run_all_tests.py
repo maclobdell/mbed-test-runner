@@ -93,36 +93,45 @@ def main():
             'other_args': other_args,
             'report_dir': os.path.join(report_base, mbed_ver, target),
             'report_type': report_type,
-            'dryrun': args.dryrun,
-            'log': log
+            'dryrun': args.dryrun
         }
         jobs.append(job)
 
     logger("Testing Started...", log)
     if jobs_count <= 1:
-        test_seq(jobs)
+        test_seq(jobs, log)
     else:
-        test_queue(jobs, jobs_count)
+        test_queue(jobs, jobs_count, log)
 
 
 def test_worker(job):
-    log = job['log']
     _rc = 255
+    results = []
     report_file = None
 
     for toolchain in job['toolchains']:
         cmd_compile = ["mbed", "test", "--compile", "-t", toolchain, "-m", job['target']] + (job['other_args'].split(' ') if job['other_args'] else [])
-        logger("EXEC: %s" % ' '.join(cmd_compile), log)
+        print "EXEC: %s" % ' '.join(cmd_compile)
+
         if not job['dryrun']:
             try:
                 _stdout, _stderr, _rc = run_cmd(cmd_compile)
-                log.debug("Command Output:" + str(_stdout))
-            except Exception, e:
-                log.error("Result: COMPILE COMMAND FAILED for %s %s: %s (%s)" % (toolchain, job['target'], e.args[0], e.args[1]))
+                results.append({
+                    'errno': _rc,
+                    'output': _stdout,
+                    'command': ' '.join(cmd_compile),
+                    'toolchain': toolchain
+                })
+            except Exception as e:
+                results.append({
+                    'errno': e.args[0],
+                    'output': e.args[1],
+                    'command': ' '.join(cmd_compile),
+                    'toolchain': toolchain
+                })
                 continue
 
         if not os.path.exists(job['report_dir']):
-            log.debug("Creating report dir %s" % job['report_dir'])
             os.makedirs(job['report_dir'])
 
         #Set an appropriate output file name
@@ -141,16 +150,27 @@ def test_worker(job):
             report_arg = "--report-json"
 
         cmd_test = ["mbed", "test", "--run", "-t", toolchain, "-m", job['target'], report_arg, job['report_dir'] + "/" + report_file] + (job['other_args'].split(' ') if job['other_args'] else [])
-        logger("EXEC: %s" % ' '.join(cmd_test), log)
+
         if not job['dryrun']:
             try:
                 _stdout, _stderr, _rc = run_cmd(cmd_test)
-                log.debug("Command Output:" + str(_stdout))
-            except Exception, e:
-                log.error("Result: TEST COMMAND FAILED %s %s" % (toolchain, job['target']))
+                results.append({
+                    'errno': _rc,
+                    'output': _stdout,
+                    'command': ' '.join(cmd_test),
+                    'toolchain': toolchain
+                })
+            except Exception as e:
+                results.append({
+                    'errno': e.args[0],
+                    'output': e.args[1],
+                    'command': ' '.join(cmd_test),
+                    'toolchain': toolchain
+                })
 
     return {
-        'code': _rc,
+        'errno': _rc,
+        'results': results,
         'report_dir': job['report_dir'],
         'report_type': job['report_type'],
         'report_file': report_file
@@ -159,18 +179,24 @@ def test_worker(job):
 
 
 # Test sequentially
-def test_seq(queue):
+def test_seq(queue, log):
     for item in queue:
         result = test_worker(item)
 
+        if result['results']:
+            for x in result['results']:
+                if x['errno']:
+                    log.error("FAILED: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
+                else:
+                    log.error("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
+
         if result['report_type'] == "json":
             log_test_summary(result['report_dir'], result['report_file'], log)
-
     return True
 
 
 # Test in parallel
-def test_queue(queue, jobs_count):
+def test_queue(queue, jobs_count, log):
     p = Pool(processes=jobs_count)
 
     results = []
@@ -193,7 +219,12 @@ def test_queue(queue, jobs_count):
                 try:
                     result = r.get()
                     results.remove(r)
-
+                    if result['results']:
+                        for x in result['results']:
+                            if x['errno']:
+                                log.error("FAILED: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
+                            else:
+                                log.error("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
                     if result['report_type'] == "json":
                         log_test_summary(result['report_dir'], result['report_file'], log)
                 except ToolException as err:
@@ -216,7 +247,7 @@ def test_queue(queue, jobs_count):
 
 def run_cmd(command, work_dir=None, redirect=False):
     try:
-        process = subprocess.Popen(command, cwd=work_dir)
+        process = subprocess.Popen(command, bufsize=0, cwd=work_dir)
         _stdout, _stderr = process.communicate()
     except Exception as e:
         print("[OS ERROR] Command: \"%s\" (%s) %s" % (' '.join(command), e.args[0], e.args[1]))
