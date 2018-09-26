@@ -122,6 +122,8 @@ def test_worker(job):
                     'command': ' '.join(cmd_compile),
                     'toolchain': toolchain
                 })
+            except KeyboardInterrupt:
+                raise ToolException
             except Exception as e:
                 results.append({
                     'errno': e.args[0],
@@ -160,6 +162,8 @@ def test_worker(job):
                     'command': ' '.join(cmd_test),
                     'toolchain': toolchain
                 })
+            except KeyboardInterrupt:
+                raise ToolException
             except Exception as e:
                 results.append({
                     'errno': e.args[0],
@@ -207,12 +211,12 @@ def test_queue(queue, jobs_count, log):
     itr = 0
     while len(results):
         itr += 1
-        if itr > 3600:
+        if itr > 216000:
             p.terminate()
             p.join()
             raise Exception(255, "Test did not finish in 1 hour")
 
-        sleep(1)
+        sleep(0.1)
         pending = 0
         for r in results:
             if r.ready():
@@ -230,10 +234,10 @@ def test_queue(queue, jobs_count, log):
                 except ToolException as err:
                     if p._taskqueue.queue:
                         p._taskqueue.queue.clear()
-                        sleep(1)
+                        sleep(0.1)
                     p.terminate()
                     p.join()
-                    raise ToolException(err)
+                    raise Exception(255, "Interrupted by user (Ctrl+C)")
             else:
                 pending += 1
                 if pending >= jobs_count:
