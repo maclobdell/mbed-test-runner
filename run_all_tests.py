@@ -208,14 +208,7 @@ def test_queue(queue, jobs_count, log):
         results.append(p.apply_async(test_worker, [queue[i]]))
     p.close()
 
-    itr = 0
     while len(results):
-        itr += 1
-        if itr > 216000:
-            p.terminate()
-            p.join()
-            raise Exception(255, "Test did not finish in 1 hour")
-
         sleep(0.1)
         pending = 0
         for r in results:
