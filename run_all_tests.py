@@ -15,6 +15,8 @@ from multiprocessing import Pool
 from time import sleep
 from prettytable import PrettyTable
 
+
+# script arguments
 parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected boards with all toolchains')
 parser.add_argument("-t", "--toolchain", default="", action='store', help="Specified toolchain(s). You can provide comma-separated list.")  #default is string
 parser.add_argument("-j", "--jobs", default=1, action='store', help="Number of jobs. Default 1.")  #default is string
@@ -30,80 +32,7 @@ class ToolException(Exception):
     """A class representing an exception throw by the tools"""
     pass
 
-def main():
-    args = parser.parse_args()
-    other_args = args.other_args
-    folder = args.folder  #folder to put the results
-    report_type = args.report
-    current_path = os.getcwd()
-    jobs_count = int(args.jobs)
-
-    if args.toolchain:
-        toolchains = args.toolchain.split(",")
-    else:
-        toolchains = ['GCC_ARM', 'ARM', 'IAR']
-
-    #get list of connected boards
-    mbeds = mbed_lstools.create()
-    muts = mbeds.list_mbeds(filter_function=None, unique_names=True, read_details_txt=False)
-
-    #get timestamp
-    dt = datetime.now()
-    timestamp =  "%s-%s-%s-%s-%s" % (dt.year, dt.month, dt.day, dt.hour, dt.minute)
-
-    #Create directory for test results here
-    # Output files go in folder structure /<test_output>/<mbed_version>/<platform>
-    try:
-        os.stat(folder)
-    except:
-        os.mkdir(folder)
-    report_base = folder
-
-    #Set up log
-    log_file = current_path + "/" + folder + "/test_runner_log_" + timestamp + ".txt"
-    logging.basicConfig(filename=log_file, level=logging.DEBUG)
-    log = logging.getLogger("Test Runner")
-    log.setLevel(logging.DEBUG)     
-
-    logger("-----------------------------------", log)
-    logger("Simple Mbed Test Runner Log", log)
-    logger("-----------------------------------", log)
-    logger("TIMESTAMP : " + timestamp, log)
-    for mut in muts:
-        logger("PLATFORM : " + mut['platform_name'], log)
-    for toolchain in toolchains:
-        logger("TOOLCHAIN : "  + toolchain, log)
-    logger("PATH: " + current_path, log)    
-    logger("RESULTS DIR: " + folder, log)
-    output = subprocess.check_output("git rev-parse HEAD" , shell=True, stderr=subprocess.STDOUT) #get the branch name
-    mbed_ver = re.sub(r'\W+', '', output)  #remove weird characters
-    logger("Mbed OS Ver: " + mbed_ver, log)
-
-    logger("Test Parameters: " + other_args, log)
-    logger("-----------------------------------", log)
-
-    jobs = []
-    for mut in muts:
-        target = mut['platform_name']
-
-        job = {
-            'target': target,
-            'toolchains': toolchains,
-            'timestamp': timestamp,
-            'other_args': other_args,
-            'report_dir': os.path.join(report_base, mbed_ver, target),
-            'report_type': report_type,
-            'dryrun': args.dryrun
-        }
-        jobs.append(job)
-
-    logger("Testing Started...", log)
-    if jobs_count <= 1:
-        test_seq(jobs, log)
-    else:
-        test_queue(jobs, jobs_count, log)
-
-
+# The test worker function that calls the sub-processes. This function cannot accept object classes because it will create an issue with multiprocessing:Pool
 def test_worker(job):
     _rc = 255
     results = []
@@ -181,21 +110,11 @@ def test_worker(job):
     }
 
 
-
 # Test sequentially
 def test_seq(queue, log):
     for item in queue:
         result = test_worker(item)
-
-        if result['results']:
-            for x in result['results']:
-                if x['errno']:
-                    log.error("FAILED: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
-                else:
-                    log.error("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
-
-        if result['report_type'] == "json":
-            log_test_summary(result['report_dir'], result['report_file'], log)
+        log_result(result, log)
     return True
 
 
@@ -216,14 +135,7 @@ def test_queue(queue, jobs_count, log):
                 try:
                     result = r.get()
                     results.remove(r)
-                    if result['results']:
-                        for x in result['results']:
-                            if x['errno']:
-                                log.error("FAILED: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
-                            else:
-                                log.error("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
-                    if result['report_type'] == "json":
-                        log_test_summary(result['report_dir'], result['report_file'], log)
+                    log_result(result, log)
                 except ToolException as err:
                     if p._taskqueue.queue:
                         p._taskqueue.queue.clear()
@@ -242,6 +154,7 @@ def test_queue(queue, jobs_count, log):
     return True
 
 
+# Function called by test_worker
 def run_cmd(command, work_dir=None, redirect=False):
     try:
         process = subprocess.Popen(command, bufsize=0, cwd=work_dir)
@@ -258,6 +171,19 @@ def logger(details, log):
     log.info(details)
 
 
+# Logging of the test result
+def log_result(result, log):
+    if result['results']:
+        for x in result['results']:
+            if x['errno']:
+                log.error("FAILED: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
+            else:
+                log.error("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
+    if result['report_type'] == "json":
+        log_test_summary(result['report_dir'], result['report_file'], log)
+
+
+# Logging json
 def log_test_summary(output_foler_path, report_file, log):
     #open the log file 
     test_data_json_file = os.path.join(output_foler_path, report_file)
@@ -280,6 +206,82 @@ def log_test_summary(output_foler_path, report_file, log):
             x.add_row([target_toolchain, platform, test_suite, test_suite_data.get("single_test_result", "none"),test_suite_data.get("elapsed_time", "none")])
 
     logger(x, log)
+
+
+# The main thing
+def main():
+    args = parser.parse_args()
+    other_args = args.other_args
+    folder = args.folder  #folder to put the results
+    report_type = args.report
+    current_path = os.getcwd()
+    jobs_count = int(args.jobs)
+
+    if args.toolchain:
+        toolchains = args.toolchain.split(",")
+    else:
+        toolchains = ['GCC_ARM', 'ARM', 'IAR']
+
+    #get list of connected boards
+    mbeds = mbed_lstools.create()
+    muts = mbeds.list_mbeds(filter_function=None, unique_names=True, read_details_txt=False)
+
+    #get timestamp
+    dt = datetime.now()
+    timestamp =  "%s-%s-%s-%s-%s" % (dt.year, dt.month, dt.day, dt.hour, dt.minute)
+
+    #Create directory for test results here
+    # Output files go in folder structure /<test_output>/<mbed_version>/<platform>
+    try:
+        os.stat(folder)
+    except:
+        os.mkdir(folder)
+    report_base = folder
+
+    #Set up log
+    log_file = current_path + "/" + folder + "/test_runner_log_" + timestamp + ".txt"
+    logging.basicConfig(filename=log_file, level=logging.DEBUG, datefmt='%m-%d %H:%M')
+    log = logging.getLogger("Test Runner")
+    log.setLevel(logging.DEBUG)     
+
+    logger("-----------------------------------", log)
+    logger("Simple Mbed Test Runner Log", log)
+    logger("-----------------------------------", log)
+    logger("TIMESTAMP : " + timestamp, log)
+    for mut in muts:
+        logger("PLATFORM : " + mut['platform_name'], log)
+    for toolchain in toolchains:
+        logger("TOOLCHAIN : "  + toolchain, log)
+    logger("PATH: " + current_path, log)    
+    logger("RESULTS DIR: " + folder, log)
+    output = subprocess.check_output("git rev-parse HEAD" , shell=True, stderr=subprocess.STDOUT) #get the branch name
+    mbed_ver = re.sub(r'\W+', '', output)  #remove weird characters
+    logger("Mbed OS Ver: " + mbed_ver, log)
+
+    logger("Test Parameters: " + other_args, log)
+    logger("-----------------------------------", log)
+
+    jobs = []
+    for mut in muts:
+        target = mut['platform_name']
+
+        job = {
+            'target': target,
+            'toolchains': toolchains,
+            'timestamp': timestamp,
+            'other_args': other_args,
+            'report_dir': os.path.join(report_base, mbed_ver, target),
+            'report_type': report_type,
+            'dryrun': args.dryrun
+        }
+        jobs.append(job)
+
+    logger("Testing Started...", log)
+    if jobs_count <= 1:
+        test_seq(jobs, log)
+    else:
+        test_queue(jobs, jobs_count, log)
+
 
 if __name__ == '__main__':
     main()
