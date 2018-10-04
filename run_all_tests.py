@@ -12,7 +12,7 @@ from json import load, dump
 import re
 import logging
 from multiprocessing import Pool
-from time import sleep
+from time import sleep, strftime
 from prettytable import PrettyTable
 
 
@@ -24,6 +24,8 @@ parser.add_argument("-d", "--dryrun", default=False, action='store_true', help="
 parser.add_argument("-f", "--folder", default="TEST_OUTPUT", action='store', help="Folder to dump test results to")  #default is string
 parser.add_argument("-r", "--report", default="json", action='store', help="Output format : json, html, text, xml")  #default is string
 parser.add_argument("-o", "--other_args", default="", action='store', help="Other arguments to pass as a string")  #default is string
+
+date_format = '%Y-%m-%d %H:%M:%S'
 
 #Warning: Using shell=True can be a security hazard.  Ignoring because I control the command parameters.
 #   Used here so I could have the option to pipe output to log file (e.g. command > log.txt).
@@ -167,7 +169,7 @@ def run_cmd(command, work_dir=None, redirect=False):
 
 
 def logger(details, log):
-    print(details)
+    print("%s %s" % (strftime(date_format), details))
     log.info(details)
 
 
@@ -228,7 +230,7 @@ def main():
 
     #get timestamp
     dt = datetime.now()
-    timestamp =  "%s-%s-%s-%s-%s" % (dt.year, dt.month, dt.day, dt.hour, dt.minute)
+    timestamp =  strftime("%Y-%m-%d %H-%M-%S")
 
     #Create directory for test results here
     # Output files go in folder structure /<test_output>/<mbed_version>/<platform>
@@ -240,25 +242,27 @@ def main():
 
     #Set up log
     log_file = current_path + "/" + folder + "/test_runner_log_" + timestamp + ".txt"
-    logging.basicConfig(filename=log_file, level=logging.DEBUG, datefmt='%m-%d %H:%M')
-    log = logging.getLogger("Test Runner")
+    logging.basicConfig(filename=log_file,
+        level=logging.DEBUG,
+        datefmt=date_format,
+        format='[%(asctime)s] %(levelname)s: %(message)s')
+    log = logging.getLogger("")
     log.setLevel(logging.DEBUG)     
 
-    logger("-----------------------------------", log)
-    logger("Simple Mbed Test Runner Log", log)
-    logger("-----------------------------------", log)
-    logger("TIMESTAMP : " + timestamp, log)
+    logger(" --------------------------------- ", log)
+    logger("|         TEST RUNNER LOG         |", log)
+    logger(" --------------------------------- ", log)
     for mut in muts:
-        logger("PLATFORM : " + mut['platform_name'], log)
+        logger("PLATFORM: " + mut['platform_name'], log)
     for toolchain in toolchains:
-        logger("TOOLCHAIN : "  + toolchain, log)
+        logger("TOOLCHAIN: "  + toolchain, log)
     logger("PATH: " + current_path, log)    
     logger("RESULTS DIR: " + folder, log)
     output = subprocess.check_output("git rev-parse HEAD" , shell=True, stderr=subprocess.STDOUT) #get the branch name
     mbed_ver = re.sub(r'\W+', '', output)  #remove weird characters
-    logger("Mbed OS Ver: " + mbed_ver, log)
+    logger("MBED OS HASH: " + mbed_ver, log)
 
-    logger("Test Parameters: " + other_args, log)
+    logger("PARAMETERS: " + other_args, log)
     logger("-----------------------------------", log)
 
     jobs = []
@@ -276,11 +280,12 @@ def main():
         }
         jobs.append(job)
 
-    logger("Testing Started...", log)
+    logger("TESTING STARTED...", log)
     if jobs_count <= 1:
         test_seq(jobs, log)
     else:
         test_queue(jobs, jobs_count, log)
+    logger("TESTING FINISHED", log)
 
 
 if __name__ == '__main__':
