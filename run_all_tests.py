@@ -211,7 +211,7 @@ def log_test_summary(output_foler_path, report_file, log):
             test_suite_data = target_test_data[test_suite]  
             x.add_row([target_toolchain, platform, test_suite, test_suite_data.get("single_test_result", "none"),test_suite_data.get("elapsed_time", "none")])
 
-    logger("TEST RESULTS FOR %s\n%s" % (platform, x), log)
+    logger("TEST RESULTS%s" % x, log)
 
 
 # The main thing
