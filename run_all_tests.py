@@ -180,7 +180,7 @@ def log_result(result, log):
             if x['errno']:
                 log.error("FAILED: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
             else:
-                log.error("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
+                log.info("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
     if result['report_type'] == "json":
         log_test_summary(result['report_dir'], result['report_file'], log)
 
@@ -189,6 +189,10 @@ def log_result(result, log):
 def log_test_summary(output_foler_path, report_file, log):
     #open the log file 
     test_data_json_file = os.path.join(output_foler_path, report_file)
+    if not os.path.exists(test_data_json_file):
+        logger("JSON FILE MISSING")
+        return
+
     with open (test_data_json_file, "r") as f:
         test_data = json.loads(f.read()) 
         f.close()
@@ -207,7 +211,7 @@ def log_test_summary(output_foler_path, report_file, log):
             test_suite_data = target_test_data[test_suite]  
             x.add_row([target_toolchain, platform, test_suite, test_suite_data.get("single_test_result", "none"),test_suite_data.get("elapsed_time", "none")])
 
-    logger(x, log)
+    logger("TEST RESULTS: %s" % x, log)
 
 
 # The main thing
