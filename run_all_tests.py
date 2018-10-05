@@ -190,7 +190,7 @@ def log_test_summary(output_foler_path, report_file, log):
     #open the log file 
     test_data_json_file = os.path.join(output_foler_path, report_file)
     if not os.path.exists(test_data_json_file):
-        logger("JSON FILE MISSING")
+        logger("JSON FILE MISSING", log)
         return
 
     with open (test_data_json_file, "r") as f:
