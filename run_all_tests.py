@@ -69,17 +69,16 @@ def test_worker(job):
 
         #Set an appropriate output file name
         if job['report_type'] == "text":
-            report_file = job['target'] + "_" + toolchain + "_" + job['timestamp'] + "_results.txt"
+            report_file = job['target'] + "_" + toolchain + "_" + "_results.txt"
             report_arg = "--report-text"    
         elif job['report_type'] == "html" :
-            report_file = job['target'] + "_" + toolchain + "_" + job['timestamp'] + "_results.html"
+            report_file = job['target'] + "_" + toolchain + "_" + "_results.html"
             report_arg = "--report-html"
         elif job['report_type'] == "xml" :
-            report_file = job['target'] + "_" + toolchain + "_" + job['timestamp'] + "_results.xml"
+            report_file = job['target'] + "_" + toolchain + "_" + "_results.xml"
             report_arg = "--report-junit"    
-        else:
-            #anytthing else, use json output
-            report_file = job['target'] + "_" + toolchain + "_" + job['timestamp'] + "_results.json"
+        else: #default is to use json output
+            report_file = job['target'] + "_" + toolchain + "_" + "_results.json"
             report_arg = "--report-json"
 
         cmd_test = ["mbed", "test", "--run", "-t", toolchain, "-m", job['target'], report_arg, job['report_dir'] + "/" + report_file] + (job['other_args'].split(' ') if job['other_args'] else [])
@@ -186,9 +185,9 @@ def log_result(result, log):
 
 
 # Logging json
-def log_test_summary(output_foler_path, report_file, log):
+def log_test_summary(output_folder_path, report_file, log):
     #open the log file 
-    test_data_json_file = os.path.join(output_foler_path, report_file)
+    test_data_json_file = os.path.join(output_folder_path, report_file)
     if not os.path.exists(test_data_json_file):
         logger("JSON FILE MISSING", log)
         return
@@ -245,7 +244,7 @@ def main():
     report_base = folder
 
     #Set up log
-    log_file = current_path + "/" + folder + "/test_runner_log_" + timestamp + ".txt"
+    log_file = current_path + "/" + folder + "/multi_runner_log_" + timestamp + ".txt"
     logging.basicConfig(filename=log_file,
         level=logging.DEBUG,
         datefmt=date_format,
@@ -278,7 +277,7 @@ def main():
             'toolchains': toolchains,
             'timestamp': timestamp,
             'other_args': other_args,
-            'report_dir': os.path.join(report_base, mbed_ver, target),
+            'report_dir': os.path.join(report_base, mbed_ver, timestamp, target),
             'report_type': report_type,
             'dryrun': args.dryrun
         }
