@@ -181,11 +181,11 @@ def log_result(result, log):
             else:
                 log.info("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
     if result['report_type'] == "json":
-        log_test_summary(result['report_dir'], result['report_file'], log)
+        log_test_report(result['report_dir'], result['report_file'], log)
 
 
 # Logging json
-def log_test_summary(output_folder_path, report_file, log):
+def log_test_report(output_folder_path, report_file, log):
     #open the log file 
     test_data_json_file = os.path.join(output_folder_path, report_file)
     if not os.path.exists(test_data_json_file):
@@ -210,9 +210,38 @@ def log_test_summary(output_folder_path, report_file, log):
             test_suite_data = target_test_data[test_suite]  
             x.add_row([target_toolchain, platform, test_suite, test_suite_data.get("single_test_result", "none"),test_suite_data.get("elapsed_time", "none")])
 
-    logger("TEST RESULTS%s" % x, log)
+    logger("TEST RESULTS\n%s" % x, log)
 
 
+# Logging json
+def log_test_summary(output_folder_path, targets, toolchains, log):
+    #create table
+    x = PrettyTable()
+    x.field_names = ["target", "platform_name", "test suite", "result"," elapsed_time (sec)"]
+
+    for target in targets:
+        for toolchain in toolchains:
+            #open the log file
+            report_file = target + "_" + toolchain + "_" + "_results.json"
+            test_data_json_file = os.path.join(output_folder_path, report_file)
+            if not os.path.exists(test_data_json_file):
+                continue
+
+            with open (test_data_json_file, "r") as f:
+                test_data = json.loads(f.read()) 
+                f.close()
+
+            #read test log for test suite results, put rows in the table
+            for target_toolchain in test_data:                
+                platform, toolchain = target_toolchain.split("-")
+                target_test_data = test_data[target_toolchain]
+                for test_suite in target_test_data:
+                    test_suite_data = target_test_data[test_suite]  
+                    x.add_row([target_toolchain, platform, test_suite, test_suite_data.get("single_test_result", "none"),test_suite_data.get("elapsed_time", "none")])
+
+    logger("------------------------------\nTOTAL RESULTS\n%s\n------------------------------\n" % x, log)
+
+    
 # The main thing
 def main():
     args = parser.parse_args()
@@ -268,16 +297,18 @@ def main():
     logger("PARAMETERS: " + other_args, log)
     logger("-----------------------------------", log)
 
+    targets = []
     jobs = []
     for mut in muts:
         target = mut['platform_name']
+        targets.append(target)
 
         job = {
             'target': target,
             'toolchains': toolchains,
             'timestamp': timestamp,
             'other_args': other_args,
-            'report_dir': os.path.join(report_base, mbed_ver, timestamp, target),
+            'report_dir': os.path.join(report_base, mbed_ver, timestamp),
             'report_type': report_type,
             'dryrun': args.dryrun
         }
@@ -288,6 +319,8 @@ def main():
         test_seq(jobs, log)
     else:
         test_queue(jobs, jobs_count, log)
+        
+    log_test_summary(os.path.join(report_base, mbed_ver, timestamp), targets, toolchains, log)
     logger("TESTING FINISHED", log)
 
 
