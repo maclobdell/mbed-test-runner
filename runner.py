@@ -250,7 +250,7 @@ def log_result(result, log):
             else:
                 log.info("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
 
-    if hasattr(result, 'report_type') and result['report_type'] == "json":
+    if 'report_type' in result.keys() and result['report_type'] == "json":
         log_test_report(result['report_dir'], result['report_file'], log)
 
 # Logging json
@@ -362,7 +362,7 @@ def main():
     log.setLevel(logging.DEBUG)     
 
     logger(" --------------------------------- ", log)
-    logger("|         %s RUNNER LOG         |" % work_title, log)
+    logger("         %s RUNNER LOG         " % work_title, log)
     logger(" --------------------------------- ", log)
     for mut in muts:
         logger("PLATFORM: " + mut['platform_name'], log)
