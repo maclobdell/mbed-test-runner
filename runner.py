@@ -294,7 +294,7 @@ def log_test_report(output_folder_path, report_file, log):
 
             x.add_row([target_toolchain, platform, test_suite, "----- TOTAL -----", total_passed, total_failed, test_suite_data.get("single_test_result", "none"), round(float(test_suite_data.get("elapsed_time", 0)), 2)])
 
-    logger("\r\nTEST RESULTS\r\n%s\r\n" % x, log)
+    logger("TEST RESULTS\r\n%s\r\n" % x, log)
 
 
 # Logging json
@@ -326,7 +326,7 @@ def log_test_summary(output_folder_path, targets, toolchains, log):
                     test_suite_data = target_test_data[test_suite]  
                     x.add_row([target_toolchain, platform, test_suite, test_suite_data.get("single_test_result", "none"), round(float(test_suite_data.get("elapsed_time", "none")), 2)])
 
-    logger("\r\n\r\nTEST RUNNER RESULTS:\r\n%s\r\n" % x, log)
+    logger("TEST RUNNER RESULTS:\r\n%s\r\n" % x, log)
 
 # script arguments
 parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected boards with all toolchains')
