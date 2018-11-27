@@ -267,7 +267,10 @@ def log_test_report(output_folder_path, report_file, log):
 
     #create table
     x = PrettyTable()
-    x.field_names = ["target", "platform_name", "test suite", "result"," elapsed_time (sec)"]
+    x.field_names = ['target', 'platform_name', 'test suite', 'test case', 'passed', 'failed', 'result', 'time']
+    for col in x.field_names:
+        x.align[col] = "l"
+    x.align[col] = "r"
 
     #TODO check if file valid, and results are available first
 
@@ -276,17 +279,32 @@ def log_test_report(output_folder_path, report_file, log):
         platform, toolchain = target_toolchain.split("-")
         target_test_data = test_data[target_toolchain]
         for test_suite in target_test_data:
-            test_suite_data = target_test_data[test_suite]  
-            x.add_row([target_toolchain, platform, test_suite, test_suite_data.get("single_test_result", "none"),test_suite_data.get("elapsed_time", "none")])
+            test_suite_data = target_test_data[test_suite]
+            test_case_data = test_suite_data['testcase_result']
+            total_passed = 0
+            total_failed = 0
+            for test_case in test_case_data:
+                duration = test_case_data[test_case].get('duration', 0.0)
+                passed = test_case_data[test_case].get('passed', 0)
+                failed = test_case_data[test_case].get('failed', 0)
+                result_text = test_case_data[test_case].get('result_text', "UNDEF")
+                x.add_row([target_toolchain, platform, test_suite, test_case, passed, failed, result_text, round(duration, 2)])
+                total_passed += passed
+                total_failed += failed
 
-    logger("TEST RESULTS\n%s" % x, log)
+            x.add_row([target_toolchain, platform, test_suite, "----- TOTAL -----", total_passed, total_failed, test_suite_data.get("single_test_result", "none"), round(float(test_suite_data.get("elapsed_time", 0)), 2)])
+
+    logger("\r\nTEST RESULTS\r\n%s\r\n" % x, log)
 
 
 # Logging json
 def log_test_summary(output_folder_path, targets, toolchains, log):
     #create table
     x = PrettyTable()
-    x.field_names = ["target", "platform_name", "test suite", "result"," elapsed_time (sec)"]
+    x.field_names = ["target", "platform_name", "test suite", "result", "time"]
+    for col in x.field_names:
+        x.align[col] = "l"
+    x.align[col] = "r"
 
     for target in targets:
         for toolchain in toolchains:
@@ -306,13 +324,14 @@ def log_test_summary(output_folder_path, targets, toolchains, log):
                 target_test_data = test_data[target_toolchain]
                 for test_suite in target_test_data:
                     test_suite_data = target_test_data[test_suite]  
-                    x.add_row([target_toolchain, platform, test_suite, test_suite_data.get("single_test_result", "none"),test_suite_data.get("elapsed_time", "none")])
+                    x.add_row([target_toolchain, platform, test_suite, test_suite_data.get("single_test_result", "none"), round(float(test_suite_data.get("elapsed_time", "none")), 2)])
 
-    logger("------------------------------\nTOTAL RESULTS\n%s\n------------------------------\n" % x, log)
+    logger("\r\n\r\nTEST RUNNER RESULTS:\r\n%s\r\n" % x, log)
 
 # script arguments
 parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected boards with all toolchains')
 parser.add_argument("-t", "--toolchain", default="", action='store', help="Specified toolchain(s). You can provide comma-separated list.")
+parser.add_argument("-m", "--mcu", default="", action='store', help="Target icrocontroller")
 parser.add_argument("-j", "--jobs", default=1, action='store', help="Number of jobs. Default 1.")
 parser.add_argument("-d", "--dryrun", default=False, action='store_true', help="print commands, don't run them")
 parser.add_argument("-f", "--folder", default="TEST_OUTPUT", action='store', help="Folder to dump test results to")
@@ -335,10 +354,13 @@ def main():
         toolchains = args.toolchain.split(",")
     else:
         toolchains = ['GCC_ARM', 'ARM', 'IAR']
-
-    #get list of connected boards
-    mbeds = mbed_lstools.create()
-    muts = mbeds.list_mbeds(filter_function=None, unique_names=True, read_details_txt=False)
+    
+    if args.mcu:
+        muts = [{'platform_name': args.mcu}]
+    else:
+        #get list of connected boards
+        mbeds = mbed_lstools.create()
+        muts = mbeds.list_mbeds(filter_function=None, unique_names=True, read_details_txt=False)
 
     #get timestamp
     dt = datetime.now()
