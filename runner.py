@@ -70,16 +70,16 @@ def test_worker(job):
 
         #Set an appropriate output file name
         if job['report_type'] == "text":
-            report_file = job['target'] + "_" + toolchain + "_" + "_results.txt"
+            report_file = job['target'] + "_" + toolchain + "_results.txt"
             report_arg = "--report-text"    
         elif job['report_type'] == "html" :
-            report_file = job['target'] + "_" + toolchain + "_" + "_results.html"
+            report_file = job['target'] + "_" + toolchain + "_results.html"
             report_arg = "--report-html"
         elif job['report_type'] == "xml" :
-            report_file = job['target'] + "_" + toolchain + "_" + "_results.xml"
+            report_file = job['target'] + "_" + toolchain + "_results.xml"
             report_arg = "--report-junit"    
         else: #default is to use json output
-            report_file = job['target'] + "_" + toolchain + "_" + "_results.json"
+            report_file = job['target'] + "_" + toolchain + "_results.json"
             report_arg = "--report-json"
 
         cmd_test = ["mbed", "test", "--run", "-t", toolchain, "-m", job['target'], report_arg, job['report_dir'] + "/" + report_file] + (job['other_args'].split(' ') if job['other_args'] else [])
@@ -255,15 +255,13 @@ def log_result(result, log):
 
 # Logging json
 def log_test_report(output_folder_path, report_file, log):
-    #open the log file 
     test_data_json_file = os.path.join(output_folder_path, report_file)
     if not os.path.exists(test_data_json_file):
         logger("JSON FILE MISSING", log)
         return
 
-    with open (test_data_json_file, "r") as f:
+    with open(test_data_json_file, "r") as f:
         test_data = json.loads(f.read()) 
-        f.close()
 
     #create table
     x = PrettyTable()
@@ -283,7 +281,7 @@ def log_test_report(output_folder_path, report_file, log):
             test_case_data = test_suite_data['testcase_result']
             total_passed = 0
             total_failed = 0
-            for test_case in test_case_data:
+            for test_case in sorted(test_case_data):
                 duration = test_case_data[test_case].get('duration', 0.0)
                 passed = test_case_data[test_case].get('passed', 0)
                 failed = test_case_data[test_case].get('failed', 0)
@@ -293,6 +291,10 @@ def log_test_report(output_folder_path, report_file, log):
                 total_failed += failed
 
             x.add_row([target_toolchain, platform, test_suite, "----- TOTAL -----", total_passed, total_failed, test_suite_data.get("single_test_result", "none"), round(float(test_suite_data.get("elapsed_time", 0)), 2)])
+
+        output_file = platform + "_" + toolchain + "_output.txt"
+        with open(os.path.join(output_folder_path, output_file), "w") as f:
+            f.write(test_suite_data['single_test_output'])
 
     logger("TEST RESULTS\r\n%s\r\n" % x, log)
 
@@ -309,14 +311,13 @@ def log_test_summary(output_folder_path, targets, toolchains, log):
     for target in targets:
         for toolchain in toolchains:
             #open the log file
-            report_file = target + "_" + toolchain + "_" + "_results.json"
+            report_file = target + "_" + toolchain + "_results.json"
             test_data_json_file = os.path.join(output_folder_path, report_file)
             if not os.path.exists(test_data_json_file):
                 continue
 
             with open (test_data_json_file, "r") as f:
                 test_data = json.loads(f.read()) 
-                f.close()
 
             #read test log for test suite results, put rows in the table
             for target_toolchain in test_data:                
