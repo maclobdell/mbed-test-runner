@@ -275,6 +275,7 @@ def log_test_report(output_folder_path, report_file, log):
     #read test log for test suite results, put rows in the table
     for target_toolchain in test_data:                
         platform, toolchain = target_toolchain.split("-")
+        output_file = platform + "_" + toolchain + "_output.txt"
         target_test_data = test_data[target_toolchain]
         for test_suite in target_test_data:
             test_suite_data = target_test_data[test_suite]
@@ -292,9 +293,9 @@ def log_test_report(output_folder_path, report_file, log):
 
             x.add_row([target_toolchain, platform, test_suite, "----- TOTAL -----", total_passed, total_failed, test_suite_data.get("single_test_result", "none"), round(float(test_suite_data.get("elapsed_time", 0)), 2)])
 
-        output_file = platform + "_" + toolchain + "_output.txt"
-        with open(os.path.join(output_folder_path, output_file), "w") as f:
-            f.write(test_suite_data['single_test_output'])
+            with open(os.path.join(output_folder_path, output_file), "a") as f:
+                f.write("\r\nTEST SUITE %s\r\n" % test_suite)
+                f.write(re.sub(r'\r\r', '', test_suite_data['single_test_output']))
 
     logger("TEST RESULTS\r\n%s\r\n" % x, log)
 
