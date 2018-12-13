@@ -40,6 +40,7 @@ def test_worker(job):
     _rc = 255
     results = []
     report_file = None
+    report_types = ['text', 'html']
 
     for toolchain in job['toolchains']:
         cmd_compile = ["mbed", "test", "--compile", "-t", toolchain, "-m", job['target']] + (job['other_args'].split(' ') if job['other_args'] else [])
@@ -68,27 +69,30 @@ def test_worker(job):
         if not os.path.exists(job['report_dir']):
             os.makedirs(job['report_dir'])
 
-        #Set an appropriate output file name
-        if job['report_type'] == "text":
-            report_file = job['target'] + "_" + toolchain + "_results.txt"
-            report_arg = "--report-text"    
-        elif job['report_type'] == "html" :
-            report_file = job['target'] + "_" + toolchain + "_results.html"
-            report_arg = "--report-html"
-        elif job['report_type'] == "xml" :
-            report_file = job['target'] + "_" + toolchain + "_results.xml"
-            report_arg = "--report-junit"    
-        else: #default is to use json output
-            report_file = job['target'] + "_" + toolchain + "_results.json"
-            report_arg = "--report-json"
+        report_file = job['target'] + "_" + toolchain + "_results.json"
+        report_arg = "--report-json"
 
-        cmd_test = ["mbed", "test", "--run", "-t", toolchain, "-m", job['target'], report_arg, job['report_dir'] + "/" + report_file] + (job['other_args'].split(' ') if job['other_args'] else [])
+        extra_report_args = []
+        #Set an appropriate output file name
+        if "text" in report_types:
+            extra_report_args.append("--report-text")
+            extra_report_args.append(job['target'] + "_" + toolchain + "_results.txt")
+        if "html"  in report_types:
+            extra_report_args.append("--report-html")
+            extra_report_args.append(job['target'] + "_" + toolchain + "_results.html")
+        if "xml" in report_types:
+            extra_report_args.append("--report-junit")
+            extra_report_args.append(job['target'] + "_" + toolchain + "_results.xml")
+
+        cmd_test = ["mbed", "test", "--run", "-t", toolchain, "-m", job['target'], report_arg, job['report_dir'] + "/" + report_file] + extra_report_args + (job['other_args'].split(' ') if job['other_args'] else [])
 
         if not job['dryrun']:
             try:
                 _stdout, _stderr, _rc = run_cmd(cmd_test)
                 results.append({
                     'errno': _rc,
+                    'report_dir': job['report_dir'],
+                    'report_file': report_file,
                     'output': _stdout,
                     'command': ' '.join(cmd_test),
                     'toolchain': toolchain
@@ -98,6 +102,8 @@ def test_worker(job):
             except Exception as e:
                 results.append({
                     'errno': e.args[0],
+                    'report_dir': job['report_dir'],
+                    'report_file': report_file,
                     'output': e.args[1],
                     'command': ' '.join(cmd_test),
                     'toolchain': toolchain
@@ -105,10 +111,7 @@ def test_worker(job):
 
     return {
         'errno': _rc,
-        'results': results,
-        'report_dir': job['report_dir'],
-        'report_type': job['report_type'],
-        'report_file': report_file
+        'results': results
     }
 
 # The test worker function that calls the sub-processes. This function cannot accept object classes because it will create an issue with multiprocessing:Pool
@@ -250,8 +253,9 @@ def log_result(result, log):
             else:
                 log.info("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
 
-    if 'report_type' in result.keys() and result['report_type'] == "json":
-        log_test_report(result['report_dir'], result['report_file'], log)
+            print x
+            if 'report_dir' in x.keys() and 'report_file' in x.keys():
+                log_test_report(x['report_dir'], x['report_file'], log)
 
 # Logging json
 def log_test_report(output_folder_path, report_file, log):
@@ -337,7 +341,6 @@ parser.add_argument("-m", "--mcu", default="", action='store', help="Target icro
 parser.add_argument("-j", "--jobs", default=1, action='store', help="Number of jobs. Default 1.")
 parser.add_argument("-d", "--dryrun", default=False, action='store_true', help="print commands, don't run them")
 parser.add_argument("-f", "--folder", default="TEST_OUTPUT", action='store', help="Folder to dump test results to")
-parser.add_argument("-r", "--report", default="json", action='store', help="Output format : json, html, text, xml")
 parser.add_argument("-o", "--other_args", default="", action='store', help="Other arguments to pass as a string")
 parser.add_argument("-w", "--work", default="test", action='store', help="Worker function to call (e.g. test, compile)")
 
@@ -346,7 +349,6 @@ def main():
     args = parser.parse_args()
     other_args = args.other_args
     folder = args.folder  #folder to put the results
-    report_type = args.report
     current_path = os.getcwd()
     jobs_count = int(args.jobs)
     work = args.work
@@ -414,7 +416,6 @@ def main():
             'timestamp': timestamp,
             'other_args': other_args,
             'report_dir': os.path.join(report_base, mbed_ver, timestamp),
-            'report_type': report_type,
             'dryrun': args.dryrun
         }
         jobs.append(job)
