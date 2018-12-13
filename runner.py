@@ -360,13 +360,16 @@ def main():
         toolchains = ['GCC_ARM', 'ARM', 'IAR']
     
     if args.mcu:
-        muts = [{'platform_name': args.mcu}]
+        targets = [args.mcu]
     else:
         #get list of connected boards
         mbeds = mbed_lstools.create()
         muts = mbeds.list_mbeds(filter_function=None, unique_names=True, read_details_txt=False)
+        targets = []
+        for mut in muts:
+            targets.append(mut['platform_name'])
 
-    #get timestamp
+    targets.sort()
     dt = datetime.now()
     timestamp =  strftime("%Y-%m-%d %H-%M-%S")
 
@@ -390,8 +393,8 @@ def main():
     logger(" --------------------------------- ", log)
     logger("         %s RUNNER LOG         " % work_title, log)
     logger(" --------------------------------- ", log)
-    for mut in muts:
-        logger("PLATFORM: " + mut['platform_name'], log)
+    for target in targets:
+        logger("PLATFORM: " + target, log)
     for toolchain in toolchains:
         logger("TOOLCHAIN: "  + toolchain, log)
     logger("PATH: " + current_path, log)    
@@ -403,12 +406,8 @@ def main():
     logger("PARAMETERS: " + other_args, log)
     logger("-----------------------------------", log)
 
-    targets = []
     jobs = []
-    for mut in muts:
-        target = mut['platform_name']
-        targets.append(target)
-
+    for target in targets:
         job = {
             'work': work,
             'target': target,
