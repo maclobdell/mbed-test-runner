@@ -40,7 +40,7 @@ def test_worker(job):
     _rc = 255
     results = []
     report_file = None
-    report_types = ['text', 'html']
+    report_types = ["text", "html"]
 
     for toolchain in job['toolchains']:
         cmd_compile = ["mbed", "test", "--compile", "-t", toolchain, "-m", job['target']] + (job['other_args'].split(' ') if job['other_args'] else [])
@@ -76,13 +76,13 @@ def test_worker(job):
         #Set an appropriate output file name
         if "text" in report_types:
             extra_report_args.append("--report-text")
-            extra_report_args.append(job['target'] + "_" + toolchain + "_results.txt")
+            extra_report_args.append(job['report_dir'] + "/" + job['target'] + "_" + toolchain + "_results.txt")
         if "html"  in report_types:
             extra_report_args.append("--report-html")
-            extra_report_args.append(job['target'] + "_" + toolchain + "_results.html")
+            extra_report_args.append(job['report_dir'] + "/" + job['target'] + "_" + toolchain + "_results.html")
         if "xml" in report_types:
             extra_report_args.append("--report-junit")
-            extra_report_args.append(job['target'] + "_" + toolchain + "_results.xml")
+            extra_report_args.append(job['report_dir'] + "/" + job['target'] + "_" + toolchain + "_results.xml")
 
         cmd_test = ["mbed", "test", "--run", "-t", toolchain, "-m", job['target'], report_arg, job['report_dir'] + "/" + report_file] + extra_report_args + (job['other_args'].split(' ') if job['other_args'] else [])
 
@@ -253,7 +253,6 @@ def log_result(result, log):
             else:
                 log.info("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
 
-            print x
             if 'report_dir' in x.keys() and 'report_file' in x.keys():
                 log_test_report(x['report_dir'], x['report_file'], log)
 
@@ -414,7 +413,7 @@ def main():
             'toolchains': toolchains,
             'timestamp': timestamp,
             'other_args': other_args,
-            'report_dir': os.path.join(report_base, mbed_ver, timestamp),
+            'report_dir': os.path.join(report_base, timestamp),
             'dryrun': args.dryrun
         }
         jobs.append(job)
