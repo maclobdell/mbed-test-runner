@@ -69,8 +69,8 @@ def test_worker(job):
         if not os.path.exists(job['report_dir']):
             os.makedirs(job['report_dir'])
 
-        report_file = job['target'] + "_" + toolchain + "_results.json"
         report_arg = "--report-json"
+        report_file = job['target'] + "_" + toolchain + "_results.json"
 
         extra_report_args = []
         #Set an appropriate output file name
@@ -314,9 +314,9 @@ def log_test_summary(output_folder_path, targets, toolchains, log):
 
     for target in targets:
         for toolchain in toolchains:
-            #open the log file
             report_file = target + "_" + toolchain + "_results.json"
             test_data_json_file = os.path.join(output_folder_path, report_file)
+            print test_data_json_file
             if not os.path.exists(test_data_json_file):
                 continue
 
@@ -426,7 +426,7 @@ def main():
         work_queue(work, jobs, jobs_count, log)
     
     if work == "test":
-        log_test_summary(os.path.join(report_base, mbed_ver, timestamp), targets, toolchains, log)
+        log_test_summary(os.path.join(report_base, timestamp), targets, toolchains, log)
 
     logger("%s FINISHED" % work_title, log)
 
