@@ -268,7 +268,7 @@ def log_test_report(output_folder_path, report_file, log):
 
     #create table
     x = PrettyTable()
-    x.field_names = ['target', 'platform_name', 'test suite', 'test case', 'passed', 'failed', 'result', 'time']
+    x.field_names = ['target/toolchain', 'test suite', 'test case', 'passed', 'failed', 'result', 'time']
     for col in x.field_names:
         x.align[col] = "l"
     x.align[col] = "r"
@@ -290,11 +290,11 @@ def log_test_report(output_folder_path, report_file, log):
                 passed = test_case_data[test_case].get('passed', 0)
                 failed = test_case_data[test_case].get('failed', 0)
                 result_text = test_case_data[test_case].get('result_text', "UNDEF")
-                x.add_row([target_toolchain, platform, test_suite, test_case, passed, failed, result_text, round(duration, 2)])
+                x.add_row([target_toolchain, test_suite, test_case, passed, failed, result_text, round(duration, 2)])
                 total_passed += passed
                 total_failed += failed
 
-            x.add_row([target_toolchain, platform, test_suite, "----- TOTAL -----", total_passed, total_failed, test_suite_data.get("single_test_result", "none"), round(float(test_suite_data.get("elapsed_time", 0)), 2)])
+            x.add_row([target_toolchain, test_suite, "----- TOTAL -----", total_passed, total_failed, test_suite_data.get("single_test_result", "none"), round(float(test_suite_data.get("elapsed_time", 0)), 2)])
 
             with open(os.path.join(output_folder_path, output_file), "a") as f:
                 f.write("\r\nTEST SUITE %s\r\n" % test_suite)
@@ -307,17 +307,26 @@ def log_test_report(output_folder_path, report_file, log):
 def log_test_summary(output_folder_path, targets, toolchains, log):
     #create table
     x = PrettyTable()
-    x.field_names = ["target", "platform_name", "test suite", "result", "time"]
+    x.field_names = ["target/toolchain", "test suite", "result", "time"]
     for col in x.field_names:
         x.align[col] = "l"
     x.align[col] = "r"
 
+    z = PrettyTable()
+    z.field_names = ["target", "test suite", "result", "time"]
+    for col in z.field_names:
+        z.align[col] = "l"
+    z.align[col] = "r"
+
     for target in targets:
+        target_test_suites = {}
+
         for toolchain in toolchains:
             report_file = target + "_" + toolchain + "_results.json"
             test_data_json_file = os.path.join(output_folder_path, report_file)
-            print test_data_json_file
+
             if not os.path.exists(test_data_json_file):
+                x.add_row([target + "_" + toolchain, "MISSING", "MISSING", 0.0])
                 continue
 
             with open (test_data_json_file, "r") as f:
@@ -329,9 +338,26 @@ def log_test_summary(output_folder_path, targets, toolchains, log):
                 target_test_data = test_data[target_toolchain]
                 for test_suite in target_test_data:
                     test_suite_data = target_test_data[test_suite]  
-                    x.add_row([target_toolchain, platform, test_suite, test_suite_data.get("single_test_result", "none"), round(float(test_suite_data.get("elapsed_time", "none")), 2)])
+                    test_suite_result = test_suite_data.get("single_test_result", "UNKNOWN")
+                    x.add_row([target_toolchain, test_suite, test_suite_result, round(float(test_suite_data.get("elapsed_time", "none")), 2)])
 
-    logger("TEST RUNNER RESULTS:\r\n%s\r\n" % x, log)
+                    if test_suite not in target_test_suites.keys():
+                        target_test_suites[test_suite] = ["OK", 0.0]
+
+                    if test_suite_result != "OK":
+                        target_test_suites[test_suite][0] = test_suite_result
+
+                    target_test_suites[test_suite][1] += float(test_suite_data.get("elapsed_time", 0))
+
+        if len(target_test_suites):
+            for test_suite in target_test_suites.keys():
+                z.add_row([target, test_suite, target_test_suites[test_suite][0], round(target_test_suites[test_suite][1], 2)])
+        else:
+            z.add_row([target, "MISSING", "MISSING", 0.0])
+
+    logger("TEST SUMMARY PER TARGET-TOOLCHAIN:\r\n%s\r\n" % x, log)
+
+    logger("TEST SUMMARY PER TARGET:\r\n%s\r\n" % z, log)
 
 # script arguments
 parser = argparse.ArgumentParser(description='Run Mbed OS tests on all connected boards with all toolchains')
