@@ -30,7 +30,7 @@ def run_cmd(command, work_dir=None, redirect=False):
         process = subprocess.Popen(command, bufsize=0, cwd=work_dir)
         _stdout, _stderr = process.communicate()
     except Exception as e:
-        print("[OS ERROR] Command: \"%s\" (%s) %s" % (' '.join(command), e.args[0], e.args[1]))
+        print(("[OS ERROR] Command: \"%s\" (%s) %s" % (' '.join(command), e.args[0], e.args[1])))
         raise e
 
     return _stdout, _stderr, process.returncode
@@ -44,7 +44,7 @@ def test_worker(job):
 
     for toolchain in job['toolchains']:
         cmd_compile = ["mbed", "test", "--compile", "-t", toolchain, "-m", job['target']] + (job['other_args'].split(' ') if job['other_args'] else [])
-        print "EXEC: %s" % ' '.join(cmd_compile)
+        print("EXEC: %s" % ' '.join(cmd_compile))
 
         if not job['dryrun']:
             try:
@@ -121,7 +121,7 @@ def compile_worker(job):
 
     for toolchain in job['toolchains']:
         cmd_compile = ["mbed", "compile", "-t", toolchain, "-m", job['target']] + (job['other_args'].split(' ') if job['other_args'] else [])
-        print "EXEC: %s" % ' '.join(cmd_compile)
+        print("EXEC: %s" % ' '.join(cmd_compile))
 
         if job['dryrun']:
             continue
@@ -157,7 +157,7 @@ def custom_worker(job):
 
     for toolchain in job['toolchains']:
         cmd_custom = [job['work'], toolchain, job['target']] + (job['other_args'].split(' ') if job['other_args'] else [])
-        print "EXEC: %s" % ' '.join(cmd_custom)
+        print("EXEC: %s" % ' '.join(cmd_custom))
 
         if job['dryrun']:
             continue
@@ -195,7 +195,7 @@ workers = {
 
 # Work sequentially
 def work_seq(work, queue, log):
-    worker = workers[work] if work in workers.keys() else workers['custom']
+    worker = workers[work] if work in list(workers.keys()) else workers['custom']
 
     for item in queue:
         result = worker(item)
@@ -205,7 +205,7 @@ def work_seq(work, queue, log):
 
 # Work in parallel
 def work_queue(work, queue, jobs_count, log):
-    worker = workers[work] if work in workers.keys() else workers['custom']
+    worker = workers[work] if work in list(workers.keys()) else workers['custom']
 
     p = Pool(processes=jobs_count)
     results = []
@@ -241,7 +241,7 @@ def work_queue(work, queue, jobs_count, log):
 
 # Generic logging
 def logger(details, log):
-    print("%s %s" % (strftime(date_format), details))
+    print(("%s %s" % (strftime(date_format), details)))
     log.info(details)
 
 # Logging of the test result
@@ -253,7 +253,7 @@ def log_result(result, log):
             else:
                 log.info("EXEC: \"%s\" (code: %s)\n%s" % (x['command'], x['errno'], x['output']))
 
-            if 'report_dir' in x.keys() and 'report_file' in x.keys():
+            if 'report_dir' in list(x.keys()) and 'report_file' in list(x.keys()):
                 log_test_report(x['report_dir'], x['report_file'], log)
 
 # Logging json
@@ -341,7 +341,7 @@ def log_test_summary(output_folder_path, targets, toolchains, log):
                     test_suite_result = test_suite_data.get("single_test_result", "UNKNOWN")
                     x.add_row([target_toolchain, test_suite, test_suite_result, round(float(test_suite_data.get("elapsed_time", "none")), 2)])
 
-                    if test_suite not in target_test_suites.keys():
+                    if test_suite not in list(target_test_suites.keys()):
                         target_test_suites[test_suite] = ["OK", 0.0]
 
                     if test_suite_result != "OK":
@@ -350,7 +350,7 @@ def log_test_summary(output_folder_path, targets, toolchains, log):
                     target_test_suites[test_suite][1] += float(test_suite_data.get("elapsed_time", 0))
 
         if len(target_test_suites):
-            for test_suite in target_test_suites.keys():
+            for test_suite in list(target_test_suites.keys()):
                 z.add_row([target, test_suite, target_test_suites[test_suite][0], round(target_test_suites[test_suite][1], 2)])
         else:
             z.add_row([target, "MISSING", "MISSING", 0.0])
@@ -425,7 +425,7 @@ def main():
     logger("PATH: " + current_path, log)    
     logger("RESULTS DIR: " + folder, log)
     output = subprocess.check_output("git rev-parse HEAD" , shell=True, stderr=subprocess.STDOUT) #get the branch name
-    mbed_ver = re.sub(r'\W+', '', output)  #remove weird characters
+    mbed_ver = re.sub(r'\W+', '', str(output))  #remove weird characters
     logger("MBED OS HASH: " + mbed_ver, log)
 
     logger("PARAMETERS: " + other_args, log)
