@@ -38,22 +38,20 @@ Its basically a wrapper around the 'mbed test' command to perform the following 
 ## Output folder structure
 Test result output files go in the following folder structure:
 
-/[test output folder]/[timestamp of test]/
+/[test output folder]/[timestamp]/
 
 The following files will be generated for each TARGET and TOOLCHAIN combination
-        TARGET_TOOLCHAIN_output.txt
-        TARGET_TOOLCHAIN_results.html
-        TARGET_TOOLCHAIN_results.json
-        TARGET_TOOLCHAIN_results.txt
+* TARGET_TOOLCHAIN_output.txt
+* TARGET_TOOLCHAIN_results.html
+* TARGET_TOOLCHAIN_results.json
+* TARGET_TOOLCHAIN_results.txt
                       
 ## Logging
 A unique log file in the test results output folder will be generated each time you invoke the script.
 
 log file name: test-runner-[timestamp].txt    
-timestamp format: MMDDHHMM
 
 Example Test Log from command: 
-
 
 ```
 [2019-11-21 10:47:24] INFO:  --------------------------------- 
