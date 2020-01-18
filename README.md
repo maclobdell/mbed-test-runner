@@ -23,7 +23,7 @@ It's a good idea to be familiar with Mbed OS and its tools in order to use this 
 * -d _or_ --dryrun
     - Don't run the commands, just print them.
 * -f _or_ --folder
-    - Folder to dump test results to.  By default it will create a folder called "test_output".
+    - Folder to dump test results to.  By default it will create a folder called "TEST_OUTPUT".
 * -w _or_ --work
     - Select to compile only or compile & test (default)
 * -t _or_ --toolchain
@@ -47,6 +47,10 @@ It's a good idea to be familiar with Mbed OS and its tools in order to use this 
 Test result output files go in the following folder structure:
 
 /[test output folder]/[timestamp]/
+
+example: 
+
+TEST_OUTPUT/2019-10-28 14-55-48/
 
 The following files will be generated for each TARGET and TOOLCHAIN combination
 * TARGET_TOOLCHAIN_output.txt
