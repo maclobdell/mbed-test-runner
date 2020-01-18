@@ -8,10 +8,18 @@ Its basically a wrapper around the 'mbed test' command to perform the following 
 1) run tests on all boards connected to the machine
 2) run tests using all compiler toolchain options
 
+## Dependencies
+* Mbed OS 5.12 or later
+* Mbed CLI 1.10 or later  
+* Python 2.7.x or 3.6.x or later
+
+It's a good idea to be familiar with Mbed OS and its tools in order to use this script.
+
 ## Arguments
 
 * -o _or_ --other_args
-    - Pass in other arguments such as reference to config files in a string.  See example below.
+    - Pass in other arguments such as specific tests to run, references to config files, macros, etc.  See example below.
+    - For information on all the arguments you can pass in this way, use 'mbed test -h' on your command line.
 * -d _or_ --dryrun
     - Don't run the commands, just print them.
 * -f _or_ --folder
@@ -25,14 +33,14 @@ Its basically a wrapper around the 'mbed test' command to perform the following 
     - The microcontroller to test.  The default is to test all that are connected without having to specify them.  You cannot specify multiple microcontrollers - only a specific one or all (default).
 
 ## Running tests
-1. Clone the mbed-os repo you want to tests
+1. Clone the mbed-os repo you want to test
 1. Hook up boards to your system (plug in usb cables).
 1. Clone this repo on the same level as the repo you are testing from (mbed-os)
 1. Execute the following command, passing in arguments (as an example). The path depends on where you have extracted script.
 
 
 ```
-    python ../mbed_test_runner/runner.py [-o "-n tests-xyz -c"] [-f my_results_folder]
+    python ../mbed-test-runner/runner.py [-o "-n tests-xyz -c"] [-f my_results_folder]
 ```
 
 ## Output folder structure
@@ -97,8 +105,19 @@ Example Test Log from command:
 ```
 
 ## Usage Tips
-On Linux, you can create an alias to shorten the command:
+On Linux, you can create an alias to shorten the command.  Just reference the path to the script.
+
 ```
-    alias mrunner="python /home/mbed_test_runner/runner.py"
-    mrunner [arguments]
+    alias runner="python /home/mbed-test-runner/runner.py"
 ```
+
+On Windows, you create a similar command alias by creating a batch file called *runner.bat* with the following contents.  Then add the path to the batch file to your PATH environment variable.  This also depends on where you installed the script.
+
+```
+python C:\Users\my_username\Documents\mbed-test-runner\runner.py %*
+```
+
+Then run the script from anywhere by typing this on a command line.  
+```    
+    runner [arguments]
+```    
